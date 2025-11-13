@@ -1,4 +1,11 @@
-﻿; AutoHotkey Script zum Minimieren von Fenstern ins System Tray
+﻿; Icon: prefer the script directory so the icon is found when the script is moved
+I_Icon := A_ScriptDir . "\\menu.ico"
+; <a href="https://www.flaticon.com/free-icons/app-menu" title="app menu icons">App menu icons created by alkhalifi design - Flaticon</a>
+IfExist, %I_Icon%
+Menu, Tray, Icon, %I_Icon%
+;return
+
+; AutoHotkey Script zum Minimieren von Fenstern ins System Tray
 ; Jedes Fenster bekommt sein eigenes Tray-Icon
 
 #Persistent
