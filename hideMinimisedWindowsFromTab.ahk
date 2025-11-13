@@ -27,6 +27,8 @@ Menu, Tray, Add
         return
     }
     
+    AppName := GetAppName(ActiveID)
+
     WinGetTitle, WinTitle, ahk_id %ActiveID%
     
     if (WinTitle = "")
@@ -52,16 +54,17 @@ Menu, Tray, Add
     Menu, %MenuName%, Add, Schließen, CloseSingleWindow
     Menu, %MenuName%, Default, Wiederherstellen
 
+    DisplayTitle := AppName . " - " . WinTitle
     ; Kurzen Titel für Tooltip erstellen
-    ShortTitle := WinTitle
-    if (StrLen(ShortTitle) > 40)
-        ShortTitle := SubStr(ShortTitle, 1, 37) . "..."
-    Menu, Tray, Add, %ShortTitle%, :%MenuName%
+    ShortDisplayTitle := DisplayTitle
+    if (StrLen(ShortDisplayTitle) > 40)
+        ShortDisplayTitle := SubStr(ShortDisplayTitle, 1, 37) . "..."
+    Menu, Tray, Add, %ShortDisplayTitle%, :%MenuName%
     
     ; Im Array speichern (store DisplayTitle and icon so deletion is reliable)
-    TrayWindows.Push({ID: ActiveID, Title: WinTitle, MenuName: MenuName})
+    TrayWindows.Push({ID: ActiveID, Title: ShortDisplayTitle, MenuName: MenuName})
 
-    TrayTip, Fenster minimiert, % WinTitle . " wurde ins Tray minimiert.", 1, 1
+    TrayTip, Fenster minimiert, % ShortDisplayTitle . " wurde ins Tray minimiert.", 2, 1
 return
 
 ; Einzelnes Fenster wiederherstellen
@@ -181,3 +184,16 @@ ExitScript:
     Gosub, RestoreAllWindows
     ExitApp
 return
+
+GetAppName(WinID) {
+    WinGet, ProcessName, ProcessName, ahk_id %WinID%
+    if(ProcessName = "")
+        return "UnbekannteApp"
+    SplitPath, ProcessName, , , , AppName
+    
+    ; Ersten Buchstaben großschreiben
+    StringUpper, FirstChar, AppName, T
+    AppName := SubStr(FirstChar, 1, 1) . SubStr(AppName, 2)
+    
+    return AppName
+}
