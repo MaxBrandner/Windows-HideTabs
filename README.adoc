@@ -1,2 +1,1 @@
-Source System Tray Icon
-<a href="https://www.flaticon.com/free-icons/app-menu" title="app menu icons">App menu icons created by alkhalifi design - Flaticon</a>
+Source System Tray Icon: +++ <a href="https://www.flaticon.com/free-icons/app-menu" title="app menu icons">App menu icons created by alkhalifi design - Flaticon</a> +++
