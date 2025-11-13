@@ -35,6 +35,7 @@ Menu, Tray, Add
     }
     
     AppName := GetAppName(ActiveID)
+    ExePath := GetExePath(ActiveID)
 
     WinGetTitle, WinTitle, ahk_id %ActiveID%
     
@@ -72,6 +73,16 @@ Menu, Tray, Add
     TrayWindows.Push({ID: ActiveID, Title: ShortDisplayTitle, MenuName: MenuName})
 
     TrayTip, Fenster minimiert, % ShortDisplayTitle . " wurde ins Tray minimiert.", 2, 1
+
+    ; Icon setzen (versuche Icon aus EXE zu extrahieren)
+    if (ExePath != "") {
+        try {
+            Menu, Tray, Icon, %ShortDisplayTitle%, %ExePath%, , 16
+            return
+        }
+    }
+    ; Fallback: Standard-Icon
+    Menu, Tray, Icon, %ShortDisplayTitle%, shell32.dll, 3, 16
 return
 
 ; Einzelnes Fenster wiederherstellen
@@ -203,4 +214,10 @@ GetAppName(WinID) {
     AppName := SubStr(FirstChar, 1, 1) . SubStr(AppName, 2)
     
     return AppName
+}
+
+; Hilfsfunktion: Vollständigen EXE-Pfad ermitteln
+GetExePath(WinID) {
+    WinGet, ProcessPath, ProcessPath, ahk_id %WinID%
+    return ProcessPath
 }
