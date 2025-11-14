@@ -18,7 +18,7 @@ This script minimizes windows to a menu in the system tray. This hides it from t
 
 - **Restore All Windows** - Restores all minimized windows at once
 - **Help** - Displays a help message
-- **Exit** - Closes the application
+- **Exit** - Closes the script and restores all windows
 - **List of all minimized windows** - Shows all currently minimized windows
 
 #### Each Minimized Window Entry in the List
