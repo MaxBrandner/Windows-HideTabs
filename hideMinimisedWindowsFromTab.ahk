@@ -5,32 +5,30 @@ IfExist, %I_Icon%
 Menu, Tray, Icon, %I_Icon%
 ;return
 
-; AutoHotkey Script zum Minimieren von Fenstern ins System Tray
-; Jedes Fenster bekommt sein eigenes Tray-Icon
+; AutoHotkey Script to minimize windows to system tray
 
 #Persistent
 #SingleInstance Force
 SetTitleMatchMode, 2
 
-; Array für minimierte Fenster mit ihren Tray-Icons
+; Array for minimized windows with their tray icons
 global TrayWindows := []
-global IconCounter := 1
+global MinimizedAppsCounter := 1
 ; Use a slightly decorated header to avoid accidental collisions with window titles
-global TrayHeaderText := "• Minimierte Fenster"
 
-; Haupt-Tray-Menu
+; Main tray menu
 Menu, Tray, NoStandard
-Menu, Tray, Add, Alle Fenster wiederherstellen, RestoreAllWindows
+Menu, Tray, Add, Restore All Windows, RestoreAllWindows
 Menu, Tray, Add
-Menu, Tray, Add, Hilfe, ShowHelp
-Menu, Tray, Add, Beenden, ExitScript
+Menu, Tray, Add, Help, ShowHelp
+Menu, Tray, Add, Exit, ExitScript
 Menu, Tray, Add
 
-; Strg+Alt+H: Aktuelles Fenster ins Tray minimieren
+; Ctrl+Alt+H: Minimize current window to tray
 ^!h::
     WinGet, ActiveID, ID, A
     if (!ActiveID) {
-        TrayTip, Fehler, Kein aktives Fenster gefunden., 2, 3
+        TrayTip, Error, No active window found., 2, 3
         return
     }
     
@@ -40,57 +38,57 @@ Menu, Tray, Add
     WinGetTitle, WinTitle, ahk_id %ActiveID%
     
     if (WinTitle = "")
-        WinTitle := "Unbenanntes Fenster"
+        WinTitle := "Unknown Window"
     
-    ; Prüfen ob Fenster schon minimiert ist
+    ; Check if window is already minimized
     for index, WinObj in TrayWindows {
         if (WinObj.ID = ActiveID) {
-            TrayTip, Bereits minimiert, Dieses Fenster ist bereits im Tray., 1, 2
+            TrayTip, Already Minimized, This window is already in the tray., 1, 2
             return
         }
     }
     
-    ; Fenster verstecken (nicht minimieren!)
+    ; Hide window
     WinHide, ahk_id %ActiveID%
     
-    ; Eindeutigen Menu-Namen erstellen
-    MenuName := "TrayMenu" . IconCounter
-    IconCounter++
+    ; Create unique menu name
+    MenuName := "TrayMenu" . MinimizedAppsCounter
+    MinimizedAppsCounter++
 
-    ; Menu für dieses Fenster erstellen
-    Menu, %MenuName%, Add, Wiederherstellen, RestoreSingleWindow
-    Menu, %MenuName%, Add, Schließen, CloseSingleWindow
-    Menu, %MenuName%, Default, Wiederherstellen
+    ; Create menu for this window
+    Menu, %MenuName%, Add, Restore, RestoreSingleWindow
+    Menu, %MenuName%, Add, Close, CloseSingleWindow
+    Menu, %MenuName%, Default, Restore
 
     DisplayTitle := AppName . " - " . WinTitle
-    ; Kurzen Titel für Tooltip erstellen
+    ; Create tooltip title
     ShortDisplayTitle := DisplayTitle
     if (StrLen(ShortDisplayTitle) > 40)
         ShortDisplayTitle := SubStr(ShortDisplayTitle, 1, 37) . "..."
     Menu, Tray, Add, %ShortDisplayTitle%, :%MenuName%
     
-    ; Im Array speichern (store DisplayTitle and icon so deletion is reliable)
+    ; Store in array 
     TrayWindows.Push({ID: ActiveID, Title: ShortDisplayTitle, MenuName: MenuName})
 
-    TrayTip, Fenster minimiert, % ShortDisplayTitle . " wurde ins Tray minimiert.", 2, 1
+    TrayTip, Window Minimized, % ShortDisplayTitle . " has been minimized to tray.", 2, 1
 
-    ; Icon setzen (versuche Icon aus EXE zu extrahieren)
+    ; Set icon (try to extract icon from executable)
     if (ExePath != "") {
         try {
             Menu, Tray, Icon, %ShortDisplayTitle%, %ExePath%, , 16
             return
         }
     }
-    ; Fallback: Standard-Icon
+    ; Fallback: Standard icon
     Menu, Tray, Icon, %ShortDisplayTitle%, shell32.dll, 3, 16
 return
 
-; Einzelnes Fenster wiederherstellen
+; Restore single window
 RestoreSingleWindow:
-    ; A_ThisMenu enthält den Menu-Namen
+    ; A_ThisMenu contains the menu name
     MenuName := A_ThisMenu
     
-    ; Finde das Fenster im Array über MenuName
+    ; Find window in array by MenuName
     for index, WinObj in TrayWindows {
         if (WinObj.MenuName = MenuName) {
             RestoreWindowAtIndex(index)
@@ -98,12 +96,12 @@ RestoreSingleWindow:
         }
     }
 
-    MsgBox, Debug: MenuName = %MenuName% nicht gefunden
+    MsgBox, Debug: MenuName = %MenuName% not found
 return
 
-; Einzelnes Fenster schließen
+; Close single window
 CloseSingleWindow:
-    ; A_ThisMenu enthält den Menu-Namen
+    ; A_ThisMenu contains the menu name
     MenuName := A_ThisMenu
     
     ; Finde das Fenster im Array über MenuName
@@ -112,16 +110,16 @@ CloseSingleWindow:
             WinID := WinObj.ID
             WinClose, ahk_id %WinID%
             
-            ; Tray-Icon entfernen
-            RemoveTrayIcon(index)
+            ; Remove app from tray menu and delete entry
+            RemoveAppFromTrayMenu(index)
             TrayWindows.RemoveAt(index)
             return
         }
     }
 return
 
-; Tray-Icon entfernen
-RemoveTrayIcon(index) {
+; Remove app from tray menu
+RemoveAppFromTrayMenu(index) {
     global TrayWindows
     
     if (index > TrayWindows.Length() || index < 1) ; index starting from 1
@@ -130,7 +128,7 @@ RemoveTrayIcon(index) {
     WinObj := TrayWindows[index]
     MenuName := WinObj.MenuName
 
-    ; Menu-Item und zugehöriges Menu löschen (mit Fehlerbehandlung)
+    ; Delete menu item and associated menu (with error handling)
     ; The tray menu is rebuilt centrally; only remove the per-window submenu here
     try {
         Menu, %MenuName%, DeleteAll
@@ -139,7 +137,7 @@ RemoveTrayIcon(index) {
     }
 }
 
-; Hilfsfunktion: Ein einzelnes Fenster per Index wiederherstellen
+; Helper function: Restore single window by index
 RestoreWindowAtIndex(index) {
     global TrayWindows
 
@@ -155,50 +153,54 @@ RestoreWindowAtIndex(index) {
     Sleep, 100
     WinActivate, ahk_id %WinID%
 
-    ; Tray-Icon entfernen und Eintrag löschen
-    RemoveTrayIcon(index)
+    ; Remove app from tray menu and delete entry
+    RemoveAppFromTrayMenu(index)
     TrayWindows.RemoveAt(index)
     return true
 }
 
-; Alle Fenster wiederherstellen
+; Restore all windows
 RestoreAllWindows:
     Count := TrayWindows.Length()
     if (Count = 0) {
-        TrayTip, Keine Fenster, Keine Fenster sind im Tray., 2, 1
+        TrayTip, No Windows, No windows are in the tray., 2, 1
         return
     }
 
-    ; Rückwärts durchgehen, damit Indizes stimmen beim Löschen
+    ; Iterate backwards so indices remain correct when deleting
     Loop, %Count% {
         index := Count - A_Index + 1
         RestoreWindowAtIndex(index)
     }
 
-    TrayTip, Wiederhergestellt, Alle Fenster wurden wiederhergestellt., 2, 1
+    TrayTip, Restored, All windows have been restored., 2, 1
 return
 
-; Hilfe anzeigen
+; Show help
 ShowHelp:
-    MsgBox, 64, Tastenkombinationen,
+    MsgBox, 64, Keyboard Shortcuts,
     (
-    Strg+Alt+H - Aktuelles Fenster ins Tray minimieren
+    Ctrl+Alt+H - Minimize current window to tray
     
-    Jedes minimierte Fenster bekommt sein eigenes Icon
-    im System Tray (unten rechts neben der Uhr).
+    Each minimized window gets its own menu entry
     
-    Rechtsklick auf Fenster-Icon:
-    - Wiederherstellen
-    - Schließen
-    
-    Rechtsklick auf Haupt-Icon (AHK):
-    - Alle Fenster wiederherstellen
+    Right-click on main icon (AHK):
+    - Restore All Windows
+    ---
+    - Help (this message)
+    - Exit
+    ---
+    - List of all minimized windows
+
+    Right-click on window entry:
+    - Restore
+    - Close   
     )
 return
 
-; Script beenden
+; Exit script
 ExitScript:
-    ; Alle Fenster wiederherstellen beim Beenden
+    ; Restore all windows before exiting
     Gosub, RestoreAllWindows
     ExitApp
 return
@@ -206,17 +208,17 @@ return
 GetAppName(WinID) {
     WinGet, ProcessName, ProcessName, ahk_id %WinID%
     if(ProcessName = "")
-        return "UnbekannteApp"
+        return "UnknownApp"
     SplitPath, ProcessName, , , , AppName
     
-    ; Ersten Buchstaben großschreiben
+    ; Capitalize first letter
     StringUpper, FirstChar, AppName, T
     AppName := SubStr(FirstChar, 1, 1) . SubStr(AppName, 2)
     
     return AppName
 }
 
-; Hilfsfunktion: Vollständigen EXE-Pfad ermitteln
+; Helper function: Get full executable path
 GetExePath(WinID) {
     WinGet, ProcessPath, ProcessPath, ahk_id %WinID%
     return ProcessPath
