@@ -1,1 +1,36 @@
+# Windows-HideTabs
+
+Prerequisites: +++ <a href="https://www.autohotkey.com/" title="Autohotkey v1">Autohotkey v1</a> +++
+
+## General
+
+This script minimizes windows to a menu in the system tray. This hides it from the Alt+Tab list and Taskbar. It's no longer visible through `Ctrl + Tab` or `Win + Tab`. But it's still running in the background. You can use this script to hide away windows without having to open a different virtual desktop or closing them.
+
+## Usage
+
+### Keyboard Shortcut
+
+`Ctrl + Alt + H` - Minimize current window to tray
+
+*Each minimized window gets its own menu entry,*
+
+### Right-Click Main Icon (AHK) in System Tray
+
+- **Restore All Windows** - Restores all minimized windows at once
+- **Help** - Displays a help message
+- **Exit** - Closes the application
+- **List of all minimized windows** - Shows all currently minimized windows
+
+#### Each Minimized Window Entry in the List
+
+- **Restore** - Restores the selected window
+- **Close** - Closes the selected window
+
+---
+
+## Technical
+The script uses `WinHide` to hide windows and tracks them for restoration.
+
+---
+
 Source System Tray Icon: +++ <a href="https://www.flaticon.com/free-icons/app-menu" title="app menu icons">App menu icons created by alkhalifi design - Flaticon</a> +++
