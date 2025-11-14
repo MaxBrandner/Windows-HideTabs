@@ -4,7 +4,7 @@ Prerequisites: +++ <a href="https://www.autohotkey.com/" title="Autohotkey v1">A
 
 ## General
 
-With the help of this script you can minimize windows to a menu in the system tray. This hides it from the Alt+Tab list and Taskbar. But it's still running in the background. You can use this script to hide away windows without having to open a different virtual desktop or closing them.
+With this script you can minimize windows to a menu in the system tray. This hides it from the Alt+Tab list and Taskbar. But it's still running in the background. You can use this script to hide away windows without having to open a different virtual desktop or closing them.
 
 ## Usage
 
