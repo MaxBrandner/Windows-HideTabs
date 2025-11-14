@@ -11,6 +11,35 @@ Menu, Tray, Icon, %I_Icon%
 #SingleInstance Force
 SetTitleMatchMode, 2
 
+; ########################################
+; Read persisted settings
+; ########################################
+
+; Settings file for persisting user choices (hotkey enabled/disabled)
+SettingsFile := A_ScriptDir . "\settings.ini"
+IniRead, HotkeyEnabled, %SettingsFile%, Settings, HotkeyEnabled, 1
+HotkeyEnabled := HotkeyEnabled + 0  ; String zu Integer
+
+; Register hotkey label, enable or disable based on persisted setting
+Hotkey, ^!h, MinimizeHotkey
+if (!HotkeyEnabled)
+    Hotkey, ^!h, Off
+
+; Read persisted messages setting (controls whether TrayTip is shown)
+IniRead, MessagesEnabledStr, %SettingsFile%, Settings, MessagesEnabled, 1
+MessagesEnabled := MessagesEnabledStr+0
+
+; Helper: show TrayTip only when messages are enabled
+ShowTrayTipIfEnabled(Title, Text, Seconds := 2, Icon := 1) {
+    global MessagesEnabled
+    if (MessagesEnabled)
+        TrayTip, %Title%, %Text%, %Seconds%, %Icon%
+}
+
+; ########################################
+; Main Script Logic
+; ########################################
+
 ; Array for minimized windows with their tray icons
 global TrayWindows := []
 global MinimizedAppsCounter := 1
@@ -20,15 +49,19 @@ global MinimizedAppsCounter := 1
 Menu, Tray, NoStandard
 Menu, Tray, Add, Restore All Windows, RestoreAllWindows
 Menu, Tray, Add
+Menu, Tray, Add, Toggle Hotkey, ToggleHotkey
+ToggleMenuCheck("Toggle Hotkey", HotkeyEnabled)
+Menu, Tray, Add, Toggle Messages, ToggleMessages
+ToggleMenuCheck("Toggle Messages", MessagesEnabled)
 Menu, Tray, Add, Help, ShowHelp
 Menu, Tray, Add, Exit, ExitScript
 Menu, Tray, Add
 
-; Ctrl+Alt+H: Minimize current window to tray
-^!h::
+; Ctrl+Alt+H: Minimize current window to tray (label so Hotkey can toggle it)
+MinimizeHotkey:
     WinGet, ActiveID, ID, A
     if (!ActiveID) {
-        TrayTip, Error, No active window found., 2, 3
+        ShowTrayTipIfEnabled("Error", "No active window found.", 2, 3)
         return
     }
     
@@ -43,7 +76,7 @@ Menu, Tray, Add
     ; Check if window is already minimized
     for index, WinObj in TrayWindows {
         if (WinObj.ID = ActiveID) {
-            TrayTip, Already Minimized, This window is already in the tray., 1, 2
+            ShowTrayTipIfEnabled("Already Minimized", "This window is already in the tray.", 1, 2)
             return
         }
     }
@@ -53,6 +86,12 @@ Menu, Tray, Add
     
     ; Create unique menu name
     MenuName := "TrayMenu" . MinimizedAppsCounter
+    DisplayTitle := AppName . " - " . WinTitle
+    ; Create tooltip title
+    ShortDisplayTitle := DisplayTitle
+    if (StrLen(ShortDisplayTitle) > 40)
+        ShortDisplayTitle := SubStr(ShortDisplayTitle, 1, 37) . "..."
+    UniqueShortDisplayTitle := ShortDisplayTitle . "  (ID:" . MinimizedAppsCounter . ")"
     MinimizedAppsCounter++
 
     ; Create menu for this window
@@ -60,27 +99,23 @@ Menu, Tray, Add
     Menu, %MenuName%, Add, Close, CloseSingleWindow
     Menu, %MenuName%, Default, Restore
 
-    DisplayTitle := AppName . " - " . WinTitle
-    ; Create tooltip title
-    ShortDisplayTitle := DisplayTitle
-    if (StrLen(ShortDisplayTitle) > 40)
-        ShortDisplayTitle := SubStr(ShortDisplayTitle, 1, 37) . "..."
-    Menu, Tray, Add, %ShortDisplayTitle%, :%MenuName%
+    Menu, Tray, Add, %UniqueShortDisplayTitle%, :%MenuName%
     
     ; Store in array 
-    TrayWindows.Push({ID: ActiveID, Title: ShortDisplayTitle, MenuName: MenuName})
+    TrayWindows.Push({ID: ActiveID, Title: UniqueShortDisplayTitle, MenuName: MenuName})
 
-    TrayTip, Window Minimized, % ShortDisplayTitle . " has been minimized to tray.", 2, 1
+    msg = %ShortDisplayTitle% . " has been minimized to tray."
+    ShowTrayTipIfEnabled("Window Minimized", msg, 2, 1)
 
     ; Set icon (try to extract icon from executable)
     if (ExePath != "") {
         try {
-            Menu, Tray, Icon, %ShortDisplayTitle%, %ExePath%, , 16
+            Menu, Tray, Icon, %UniqueShortDisplayTitle%, %ExePath%, , 16
             return
         }
     }
     ; Fallback: Standard icon
-    Menu, Tray, Icon, %ShortDisplayTitle%, shell32.dll, 3, 16
+    Menu, Tray, Icon, %UniqueShortDisplayTitle%, shell32.dll, 3, 16
 return
 
 ; Restore single window
@@ -163,7 +198,7 @@ RestoreWindowAtIndex(index) {
 RestoreAllWindows:
     Count := TrayWindows.Length()
     if (Count = 0) {
-        TrayTip, No Windows, No windows are in the tray., 2, 1
+        ShowTrayTipIfEnabled("No Windows", "No windows are in the tray.", 2, 1)
         return
     }
 
@@ -173,7 +208,7 @@ RestoreAllWindows:
         RestoreWindowAtIndex(index)
     }
 
-    TrayTip, Restored, All windows have been restored., 2, 1
+    ShowTrayTipIfEnabled("Restored", "All windows have been restored.", 2, 1)
 return
 
 ; Show help
@@ -205,6 +240,39 @@ ExitScript:
     ExitApp
 return
 
+; Toggle the Ctrl+Alt+H hotkey on/off and persist the choice
+ToggleHotkey:
+    ; Flip state
+    HotkeyEnabled := !HotkeyEnabled
+
+    if (HotkeyEnabled)
+        Hotkey, ^!h, On
+    else
+        Hotkey, ^!h, Off
+
+    ToggleMenuCheck("Toggle Hotkey", HotkeyEnabled)
+    ; Save setting
+    val := HotkeyEnabled ? 1 : 0
+    IniWrite, %val%, %SettingsFile%, Settings, HotkeyEnabled
+
+    ShowTrayTipIfEnabled("Hotkey", "Ctrl+Alt+H is now " . (HotkeyEnabled ? "enabled" : "disabled"), 2, 1)
+return
+
+ToggleMessages:
+    ; Flip state
+    MessagesEnabled := !MessagesEnabled
+
+    ; Save setting
+    val := MessagesEnabled ? 1 : 0
+    IniWrite, %val%, %SettingsFile%, Settings, MessagesEnabled
+
+    if (MessagesEnabled) {
+        ShowTrayTipIfEnabled("Messages", "Tray tips are now enabled.", 2, 1)
+    } 
+    
+    ToggleMenuCheck("Toggle Messages", MessagesEnabled)
+return
+
 GetAppName(WinID) {
     WinGet, ProcessName, ProcessName, ahk_id %WinID%
     if(ProcessName = "")
@@ -222,4 +290,11 @@ GetAppName(WinID) {
 GetExePath(WinID) {
     WinGet, ProcessPath, ProcessPath, ahk_id %WinID%
     return ProcessPath
+}
+
+ToggleMenuCheck(MenuItem, IsEnabled) {
+    if (IsEnabled)
+        Menu, Tray, Check, % MenuItem
+    else
+        Menu, Tray, Uncheck, % MenuItem
 }
